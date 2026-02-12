@@ -195,3 +195,187 @@ Agora teste no navegador
 http://SEU_IP/Movies
 http://172.184.215.180/Movies  (Lembre-se de que a API deve estar rodando)
 
+## Instalar PostgreSQL na VM Ubuntu
+
+No terminal da VM:
+sudo apt update
+sudo apt install -y postgresql postgresql-contrib
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+
+Criar usuário e banco:
+sudo -i -u postgres
+psql
+
+Dentro do psql, rode:
+-- Criar banco de dados
+CREATE DATABASE moviesdb;
+
+-- Criar usuário
+CREATE USER juarez WITH PASSWORD 'sua_senha';
+
+-- Dar privilégios ao usuário
+GRANT ALL PRIVILEGES ON DATABASE moviesdb TO juarez;
+
+\q
+exit
+
+Testar conexão
+No terminal da VM:
+psql -U juarez -d moviesdb -h localhost
+
+## Configurar sua Web API .NET 8
+📌 Instalar pacotes EF Core para PostgreSQL
+No projeto:
+dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL --version 8.0.0
+dotnet add package Microsoft.EntityFrameworkCore.Design --version 8.0.0
+dotnet add package Microsoft.EntityFrameworkCore.Tools --version 8.0.0
+
+📌 Configurar DbContext
+Data/AppDbContext.cs:
+```cs
+using Microsoft.EntityFrameworkCore;
+using SeuProjeto.Models;
+
+namespace SeuProjeto.Data
+{
+    public class AppDbContext : DbContext
+    {
+        public AppDbContext(DbContextOptions<AppDbContext> options)
+            : base(options) { }
+
+        public DbSet<Movie> Movies { get; set; }
+    }
+}
+```
+📌 Connection string no appsettings.json (Versão onde o banco está na mesma vm que a web api)
+```json
+ "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=moviesdb;Username=postgres;Password=19861989"
+  }
+```
+Para testar na máquina local, use:
+```json
+"ConnectionStrings": {
+  "DefaultConnection": "Host=IP_PUBLICO_DA_VM;Port=5432;Database=moviesdb;Username=juarez;Password=sua_senha"
+}
+```
+
+📌 Program.cs
+```cs
+using Microsoft.EntityFrameworkCore;
+using SeuProjeto.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddControllers();
+
+var app = builder.Build();
+app.MapControllers();
+app.Run();
+```
+
+Criar migrations e atualizar banco
+No projeto: 
+```bash
+dotnet ef migrations add InitialCreate
+dotnet ef database update
+```
+
+Pronto! Agora o PostgreSQL está rodando na VM e a Web API está conectada.
+
+## Criando um serviço systemd na VM, para a API rodar de forma
+
+✔ automática
+✔ segura
+✔ em background
+✔ com restart automático
+✔ integrada aos logs do sistema
+Ou seja: muito melhor do que rodar dotnet api.dll manualmente.
+
+🚀 Como transformar sua API .NET em um serviço systemd
+1. Escolha uma pasta final para o publish
+Por exemplo:
+/home/azureuser/web-api
+
+Sua DLL vai estar lá, tipo:
+/home/azureuser/web-api/api.dll
+
+📝 2. Criar o arquivo de serviço do systemd
+Você vai criar um arquivo:
+/etc/systemd/system/api.service
+Crie com:
+sudo nano /etc/systemd/system/movies-api.service
+
+Conteúdo do arquivo:
+```txt
+[Unit]
+Description=API Movies .NET 8
+After=network.target
+
+[Service]
+WorkingDirectory=/home/azureuser/web-api
+ExecStart=/usr/bin/dotnet /home/azureuser/web-api/api-movies.dll
+Restart=always
+# Usuario que irá rodar a API
+User=azureuser
+# Grupo do usuario
+Group=azureuser
+# Variáveis de ambiente (opcional)
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+
+[Install]
+WantedBy=multi-user.target
+```
+
+
+Explicando as partes importantes:
+ExecStart: comando para iniciar sua aplicação.
+Restart=always: reinicia automaticamente se a API falhar.
+User e Group: define com qual usuário o serviço roda (nunca use root se não precisar).
+WantedBy=multi-user.target: faz com que o serviço inicie automaticamente no boot
+
+## Ativar e iniciar o serviço
+Depois de salvar o arquivo:
+
+Recarregar o systemd para reconhecer o novo serviço
+sudo systemctl daemon-reload
+
+Habilitar para iniciar no boot
+sudo systemctl enable movies-api.service
+
+Iniciar imediatamente
+sudo systemctl start movies-api.service
+
+Checar status
+sudo systemctl status movies-api.service
+
+Se tudo estiver certo, você verá algo como:
+Active: active (running)
+
+Para reiniciar manualmente:
+sudo systemctl restart movies-api.service
+
+Para parar:
+sudo systemctl stop movies-api.service
+
+✅ Benefícios de rodar a API como serviço
+
+Inicia automaticamente quando a VM liga.
+Reinicia se der erro.
+Você consegue controlar facilmente com systemctl.
+Mais seguro: roda com usuário específico, não com root.
+
+
+Testar na VM:
+curl http://localhost:5000/api/movies
+
+Testar em outra máquina (com o nginx configurado), no terminal:
+curl http://IP_PUBLICO/endpoint
+
+Testar em outra máquina (com o nginx configurado), direto no navegador:
+http://IP_PUBLICO/endpoint

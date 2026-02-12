@@ -175,19 +175,15 @@ ps aux | grep ApiMovies.dll
 Depois que a instância atual estiver parada:
 
 Execute o publish:
-
 sudo dotnet publish -c Release -o /var/www/api-movies
 
 
 Inicie a nova versão:
-
 Manual:
-
 dotnet /var/www/api-movies/ApiMovies.dll
 
 
 Com systemd (recomendado):
-
 sudo systemctl start api-movies.service
 
 Ver o status:
@@ -210,4 +206,14 @@ Testando a conexão com o servidor azure:
 ssh -i C:\Projects\chaves\JbuntuServerVm_key.pem azureuser@172.184.215.180
 
 Enviado a pasta de publish para o servidor via SCP:
+Com chave ssh pública:
 scp -i C:\Projects\chaves\JbuntuServerVm_key.pem -r C:\Users\josejuarez.junior\Documents\projects\web-api\ApiMoviesLab\publish azureuser@172.184.215.180:/home/azureuser/web-api
+
+Sem chave, apenas com a senha:
+scp -r "C:/Users/josejuarez.junior/Documents/projects/web-api/ApiMoviesLab/publish" azureuser@172.184.215.180:/home/azureuser/web-api
+Ele vai pedir:
+azureuser@172.184.215.180's password:
+
+Acessando a VM, quando só a senha é necessária:
+ssh -i -u usuario@IP_PUBLICO_DA_VM
+ssh -i -u azureuser@172.184.215.180
