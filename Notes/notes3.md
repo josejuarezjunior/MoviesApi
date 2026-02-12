@@ -215,5 +215,5 @@ Ele vai pedir:
 azureuser@172.184.215.180's password:
 
 Acessando a VM, quando só a senha é necessária:
-ssh -i -u usuario@IP_PUBLICO_DA_VM
-ssh -i -u azureuser@172.184.215.180
+ssh usuario@IP_PUBLICO_DA_VM
+ssh azureuser@172.184.215.180

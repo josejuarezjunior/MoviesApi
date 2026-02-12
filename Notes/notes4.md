@@ -379,3 +379,6 @@ curl http://IP_PUBLICO/endpoint
 
 Testar em outra máquina (com o nginx configurado), direto no navegador:
 http://IP_PUBLICO/endpoint
+
+Enviar a pasta publish da máquina local para a VM:
+scp -r "C:/Users/josejuarez.junior/Documents/projects/web-api/ApiMoviesLab/publish" azureuser@172.184.215.180:/home/azureuser/web-api
